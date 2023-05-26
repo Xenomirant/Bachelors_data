@@ -50,12 +50,7 @@ exp(7.5)
 
 data[order(data$Reading.time)[1:10], ] %>% View()
 
-data %>% 
-  ggplot(aes(Reading.time))+
-  geom_boxplot()+
-  coord_flip()+
-  xlim(0, 5000)+
-  facet_wrap(~age)
+data %>% glimpse()
 
 
 #test for residuals and strange data
@@ -77,6 +72,10 @@ extra_data %>%
 data %>% 
   filter(Reading.time < 2000) -> data
 
+data %>% 
+  ggplot(aes(SSP, log(Reading.time), color = position))+
+  geom_boxplot()+
+  facet_wrap(~age)
 
 #check dataframe with original data
 exp_data <- read_csv("experiment_words - updated_experiment.csv") %>% 
@@ -132,7 +131,7 @@ data %>%
   geom_density(alpha = 0.6)+
   facet_wrap(~position)
 
-
+#needed for text
 data %>% 
   ggplot(aes(Reading.time,  fill = SSP))+
   geom_density(alpha = 0.5)+
@@ -140,9 +139,10 @@ data %>%
 
 
 data %>% 
-  ggplot(aes(Reading.time, fill = position)) +
+  ggplot(aes(log(Reading.time), fill = position)) +
   geom_density(alpha = 0.6)+
-  geom_density(aes(rnorm(1159, mean = 706.27, sd = 391.81)), alpha = 0.3, fill = "red")+
+  geom_density(aes(x = rlnorm(n = 1159, meanlog = 1.85615403, 
+                              sdlog = 0.08195626)), alpha = 0.3, fill = "red")+
   facet_wrap(~SSP)
 
 rnorm(10000, mean = 706.27, sd = 391.81)
@@ -156,7 +156,7 @@ sd(data$Reading.time)
 
 mean(data$Reading.time)
 
-fitdistrplus::fitdist(data$Reading.time, distr = "norm", method = "mle")
+fitdistrplus::fitdist(log(data$Reading.time), distr = "lnorm", method = "mle")
 
 
 data %>% 
@@ -450,7 +450,7 @@ pseudowords_data %>%
   geom_smooth(aes(SSP_bool, Reading.time), method = "lm")
 
 
-
+library(rstatix)
 #anova
 
 res.aov_words <- words_data %>% 

@@ -29,14 +29,19 @@ read.pcibex <- function(filepath, auto.colnames=TRUE, fun.col=function(col,cols)
   }
 }
 
-data = read.pcibex("results.csv")
+data = read.pcibex("data/results.csv")
 
 
 library(tidyverse)
 library(stringi)
-
+library(openssl)
 
 data = tibble(data)
+
+data %>% 
+  mutate(id = md5(id)) -> data
+
+write_csv(data, "data/results.csv")  
 
 #filter useless rows
 data %>% 
