@@ -29,6 +29,7 @@ read.pcibex <- function(filepath, auto.colnames=TRUE, fun.col=function(col,cols)
   }
 }
 
+# very first processing
 data = read.pcibex("data/results.csv")
 
 
@@ -38,10 +39,17 @@ library(openssl)
 
 data = tibble(data)
 
+#hash participants names or ids for data publication
 data %>% 
   mutate(id = md5(id)) -> data
 
 write_csv(data, "data/results.csv")  
+
+
+#read any other time
+data = read_csv("data/results.csv")
+
+
 
 #filter useless rows
 data %>% 
@@ -84,4 +92,4 @@ filtered_data %>%
 
 filtered_data %>% view()
 
-write_csv(filtered_data, "processed_results.csv")
+write_csv(filtered_data, "data/processed_results.csv")
