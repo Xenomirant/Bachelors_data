@@ -50,10 +50,9 @@ write_csv(data, "data/results.csv")
 data = read_csv("data/results.csv")
 
 
-
-#filter useless rows
+#filter useless rows and test case
 data %>% 
-  filter(!id == "пробный") %>% 
+  filter(!age == "100") %>% 
   filter(!Parameter %in% c("_Trial_", "_Header_")) -> filtered_data
   
 #filter unnecessary columns

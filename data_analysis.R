@@ -39,30 +39,40 @@ sd(data[data$age == 7, ]$Reading.time)
 mean(data[data$age != 7, ]$Reading.time)
 sd(data[data$age != 7, ]$Reading.time)
 
-
+# 
 #filter Vorontsov
 data <- 
-  data %>% filter(id != "Воронцов Сережа")
-
-
-
-exp(7.5)
+  data %>% filter(age != 7)
 
 data[order(data$Reading.time)[1:10], ] %>% View()
 
 data %>% glimpse()
 
 
+#filter outliers
+
+outlier_border <- quantile(data$Reading.time)[4] + 
+  1.5*(quantile(data$Reading.time)[4] - quantile(data$Reading.time)[2]) 
+
+
 #test for residuals and strange data
-data[data$Reading.time > 2000, ] -> extra_data
+data[data$Reading.time > outlier_border, ] -> extra_data
 
 extra_data %>% 
   group_by(SSP) %>% 
-  summarise(n = n()/89)
+  summarise(n = n()/length(row.names(extra_data)))
+
+data %>% 
+  group_by(SSP) %>% 
+  summarise(n = n()/length(row.names(data)))
 
 extra_data %>% 
   group_by(position) %>% 
-  summarise(n = n()/89)
+  summarise(n = n()/length(row.names(extra_data)))
+
+data %>% 
+  group_by(position) %>% 
+  summarise(n = n()/length(row.names(data)))
 
 extra_data %>% 
   ggplot(aes(word_length, Reading.time, color = SSP, shape = position))+
@@ -70,7 +80,7 @@ extra_data %>%
 
 
 data %>% 
-  filter(Reading.time < 2000) -> data
+  filter(Reading.time < outlier_border) -> data
 
 data %>% 
   ggplot(aes(SSP, log(Reading.time), color = position))+
@@ -105,6 +115,8 @@ round(
   ),
   3)
 
+
+## everything further is just trash with no real value
 
 # analyze processed data
 data %>% 
@@ -239,21 +251,18 @@ t.test(
 )
 
 
-cor(
-  subset(data, data$word_type == "word" & !is.na(data$cluster_freq))$cluster_length,
-  subset(data, data$word_type == "word" & !is.na(data$cluster_freq))$Reading.time
-)
+
 
 # test for secondary factors
 
 data %>% 
   filter(!is.na(word_freq)) %>% 
-  ggplot(aes(log(word_freq), Reading.time))+
+  ggplot(aes(word_freq, Reading.time))+
   geom_point()
 
 data %>% 
   filter(!is.na(cluster_freq)) %>% 
-  ggplot(aes(log(cluster_freq), Reading.time))+
+  ggplot(aes(cluster_freq, Reading.time))+
   geom_point()
 
 
@@ -421,9 +430,9 @@ words_data %>%
   lm(Reading.time ~ age + SSP + position, .) %>% 
   summary()
 
-words_data %>% 
-  lme4::lmer(Reading.time ~ SSP + position + word_freq:cluster_freq + cluster_length + 
-       (1|id), .) -> model
+# words_data %>% 
+#   lme4::lmer(Reading.time ~ SSP + position + word_freq:cluster_freq + cluster_length + 
+#        (1|id), .) -> model
 
 
 
@@ -451,13 +460,30 @@ pseudowords_data %>%
 
 
 library(rstatix)
+library(gt)
+
+#table for final text
+
+data %>% group_by(word_type, position, SSP) %>% 
+  summarise(mean = mean(Reading.time),
+            sd = sd(Reading.time)) %>% 
+  pivot_wider(names_from = word_type, values_from = mean:sd) %>% 
+  mutate(position = factor(position, levels = c("start", "end", "filler"))) %>% 
+  arrange(position) %>% gt() %>% 
+  tab_header(
+    title = "Распределение значений скорости чтения для целевых слов",
+    subtitle = "значения указаны в мс"
+  )
+
+xtabs(~age, data)
+
 #anova
 
 res.aov_words <- words_data %>% 
-  anova_test(log(Reading.time) ~ id + SSP + position)
+  anova_test(Reading.time ~ id + SSP + position)
 
 res.aov_pseudo <- pseudowords_data %>% 
-  anova_test(log(Reading.time) ~ id + SSP + position)
+  anova_test(Reading.time ~ id + SSP + position)
 
 words_data %>% 
   ggplot(aes(SSP, Reading.time, color = position))+
@@ -475,9 +501,21 @@ data %>%
 
 
 pseudowords_data %>% 
-  filter(SSP == "nSSP") %>% 
+  pairwise_t_test(Reading.time ~ SSP)
+
+
+pseudowords_data %>% 
   pairwise_t_test(Reading.time ~ position)
 
+pseudowords_data %>% 
+  ggplot(aes(position, Reading.time, color = SSP)) +
+  geom_boxplot()
+
+  
+data %>% group_by(id) %>% freq_table()
+    
+data %>% 
+  anova_test(Reading.time ~ age + SSP + position + word_type)
 
 data %>% 
   lm(log(Reading.time) ~ age + SSP + position + word_type, .) -> model
@@ -489,3 +527,4 @@ shapiro.test(residuals(model))
 plot(model, which = 1)
 
 plot(model, which = 3)
+
