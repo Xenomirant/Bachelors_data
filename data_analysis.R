@@ -28,6 +28,13 @@ data %>%
   mutate(word_length = factor(word_length),
          cluster_length = factor(cluster_length)) -> data
 
+data %>% 
+  mutate(word_freq = as.numeric(word_freq),
+         cluster_freq = as.numeric(cluster_freq)) -> data
+
+data %>% 
+  mutate(log_RT = log(Reading.time)) -> data 
+
 mean(data$Reading.time)
 
 sd(data$Reading.time)
@@ -145,8 +152,8 @@ data %>%
 
 #needed for text
 data %>% 
-  ggplot(aes(Reading.time,  fill = SSP))+
-  geom_density(alpha = 0.5)+
+  ggplot(aes(log(Reading.time),  fill = SSP))+
+  geom_density(alpha = 0.4)+
   facet_wrap(~word_type)
 
 
@@ -434,16 +441,21 @@ words_data %>%
 #   lme4::lmer(Reading.time ~ SSP + position + word_freq:cluster_freq + cluster_length + 
 #        (1|id), .) -> model
 
+data %>% 
+  lm(log_RT ~ age + SSP + position, .) -> model
 
-
-words_data %>% 
+data %>% 
   mutate(prediction = predict(model)) %>% 
-  ggplot(aes(age, prediction, color = SSP, shape = position))+
+  ggplot(aes(age, log_RT, color = SSP, shape = position))+
   geom_point() + 
-  geom_smooth(aes(age, Reading.time), method = "lm")
+  geom_smooth(aes(age, log_RT), method = "lm")+
+  ylim(4.7,7.9)+
+  xlab("Возраст участников") +
+  ylab("Логарифм времени чтения") + 
+  labs(title = "График зависимости скорости чтения от возраста участника")
 
 
-
+predict(model)
 
 
 
@@ -477,13 +489,72 @@ data %>% group_by(word_type, position, SSP) %>%
 
 xtabs(~age, data)
 
+data %>% 
+  ggplot(aes(position, log(Reading.time), color = SSP))+
+  geom_boxplot()+
+  facet_wrap(~word_type)
+
+
+#needed for text
+data %>% 
+  ggplot(aes(log(Reading.time),  fill = SSP))+
+  geom_density(alpha = 0.4)+
+  facet_wrap(~word_type)
+
+
+words_data %>% 
+  ggplot(aes(log(Reading.time),  fill = SSP))+
+  geom_density(alpha = 0.4)+
+  facet_wrap(~position)
+
+
+pseudowords_data %>% 
+  ggplot(aes(log(Reading.time),  fill = position))+
+  geom_density(alpha = 0.4)+
+  facet_wrap(~SSP)
+
+t.test(
+  pseudowords_data[pseudowords_data$SSP == "filler", ]$Reading.time,
+  pseudowords_data[pseudowords_data$SSP != "filler", ]$Reading.time
+       )
+
 #anova
 
 res.aov_words <- words_data %>% 
-  anova_test(Reading.time ~ id + SSP + position)
+  anova_test(log_RT ~ age + SSP + position)
 
 res.aov_pseudo <- pseudowords_data %>% 
-  anova_test(Reading.time ~ id + SSP + position)
+  anova_test(log_RT ~ age + SSP + position)
+
+
+t.test(
+  pseudowords_data[pseudowords_data$position %in% c("start", "end"), ]$log_RT,
+  pseudowords_data[pseudowords_data$position == "filler", ]$log_RT
+)
+
+pseudowords_data %>% 
+  ggplot(position, log_RT) %>% 
+  geom_boxplot()
+
+res.aov <- anova_test(log_RT ~ age + SSP + position + word_type, data = data)
+
+t.test(
+  data[data$word_type == "word", ]$log_RT,
+  data[data$word_type == "pseudoword", ]$log_RT
+)
+
+
+
+
+res.aov
+
+resid.aov <- residuals(res.aov)
+hist(resid.aov)
+
+shapiro.test(resid.aov)
+
+
+
 
 words_data %>% 
   ggplot(aes(SSP, Reading.time, color = position))+
@@ -497,7 +568,12 @@ pseudowords_data %>%
 data %>% 
   ggplot(aes(SSP, log(Reading.time), color = position))+
   geom_boxplot()+
-  facet_wrap(~word_type)
+  ylim(5,8)+
+  facet_wrap(~word_type)+
+  xlab("")+
+  ylab("Логарифм времени чтения")+
+  labs(title = "График распределения логарифма времени чтения целевых слов в зависимости
+от контролируемых параметров")
 
 
 pseudowords_data %>% 
